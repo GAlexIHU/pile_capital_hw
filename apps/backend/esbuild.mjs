@@ -3,7 +3,7 @@ import { copy } from "esbuild-plugin-copy";
 
 await build({
   bundle: true,
-  entryPoints: ["src/index.ts"],
+  entryPoints: ["src/index.ts", "src/seed.ts"],
   outdir: "dist",
   platform: "node",
   target: "node20",

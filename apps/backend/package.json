@@ -7,7 +7,7 @@
     "dev": "nodemon",
     "build": "node esbuild.mjs",
     "test": "vitest run",
-    "migrate": "node-pg-migrate -m ./migrations -j ts",
+    "seed": "pnpm build && node dist/seed.js",
     "lint": "eslint --ext .ts src"
   },
   "dependencies": {
