@@ -1,6 +1,6 @@
 {
   "watch": ["dist"],
   "ext": "js",
-  "exec": "dotenvx run -- node ./dist/index.js",
+  "exec": "dotenvx run -- node --enable-source-maps ./dist/index.js",
   "legacyWatch": true
 }
