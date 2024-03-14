@@ -15,9 +15,12 @@ import { cacherFactory } from "./framework/cached";
 import { getFromContext } from "./framework/context";
 import { layzInit } from "./framework/lazy-init";
 import { rootLogger } from "./framework/logger";
+import { accountRepositoryFactory } from "./repositories/account.repo";
 import { exampleEntityRepositoryFactory } from "./repositories/example-entity.repo";
 import { getExampleEntityRouteHandlerFactory } from "./routes/get-example-entity.handler";
+import { searchAccountsRouteHandlerFactory } from "./routes/search-accounts.handler";
 import { getExampleEntityUseCaseFactory } from "./use-cases/get-example-entity.use-case";
+import { searchAccountsUseCaseFactory } from "./use-cases/search-accounts.use-case";
 
 const s = initServer();
 
@@ -47,6 +50,8 @@ export const createApp = (config: Config): App => {
 
   const exampleEntityRepository = exampleEntityRepositoryFactory(pool);
 
+  const accountRepository = accountRepositoryFactory(pool);
+
   const redisService = redisServiceFactory(
     {
       redisClient: redisClient,
@@ -67,10 +72,20 @@ export const createApp = (config: Config): App => {
     exampleEntityRepo: exampleEntityRepository,
   });
 
+  const searchAccountsUseCase = searchAccountsUseCaseFactory({
+    accountRepo: accountRepository,
+  });
+
   const router = s.router(api, {
     example: s.router(api.example, {
       get: getExampleEntityRouteHandlerFactory({
         getExampleEntityUseCase,
+        cache,
+      }),
+    }),
+    account: s.router(api.account, {
+      search: searchAccountsRouteHandlerFactory({
+        searchAccountsUseCase,
         cache,
       }),
     }),
@@ -79,7 +94,9 @@ export const createApp = (config: Config): App => {
   return {
     run: async () => {
       try {
-        await initPool(config.postgres.url);
+        await initPool(config.postgres.url, {
+          typeParsers: [],
+        });
         await redisClient.connect();
         await server.register(cors, {});
         await server.register(s.plugin(router));
