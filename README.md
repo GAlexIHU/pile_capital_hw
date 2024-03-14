@@ -1,6 +1,6 @@
-# TS Starter Repo
+# Pile Capital HW Assignment
 
-The purpose of this repo is to provide a starting point for a TypeScript monorepo with a backend and frontend. The backend is a fastify server with a REST API & the frontend is a static react application.
+The original assignment can be found in `/docs`.
 
 ## First Time Setup
 
