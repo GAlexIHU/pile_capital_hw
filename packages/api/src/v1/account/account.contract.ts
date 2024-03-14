@@ -19,6 +19,7 @@ export const accountContract = c.router({
         count: z.number(),
         page: z.number(),
         totalPages: z.number(),
+        totalBalance: AccountSchema.shape.balances.shape.available,
         results: z.array(AccountSchema),
       }),
     },

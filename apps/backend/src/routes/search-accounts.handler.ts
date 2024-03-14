@@ -36,6 +36,7 @@ export const searchAccountsRouteHandlerFactory: (deps: {
         count: value.count,
         page: value.page,
         totalPages: value.totalPages,
+        totalBalance: value.totalBalance,
         results: value.results.map(mapAccount),
       },
     };
