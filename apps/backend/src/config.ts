@@ -26,7 +26,7 @@ const config = convict({
   cacheSeconds: {
     doc: "The number of seconds to cache data.",
     format: "int",
-    default: 120,
+    default: 2,
     env: "CACHE_SECONDS",
   },
 });

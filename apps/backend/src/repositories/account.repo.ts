@@ -1,8 +1,12 @@
-import { DatabasePool, sql } from "slonik";
+import { DatabaseConnection, sql } from "slonik";
 import z from "zod";
 import { Account } from "../entities/account.entity";
 import { Lazy } from "../types/lazy";
-import { InsertableRepository } from "./repository";
+import {
+  GettableRepository,
+  InsertableRepository,
+  TransactableRepository,
+} from "./repository";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -16,11 +20,15 @@ const rowSchema = z.object({
     }),
   }),
   country: z.string(),
-  createdAt: z.date(),
+  created_at: z.coerce.date(),
   name: z.string(),
 });
 
-export interface AccountRepository extends InsertableRepository<Account> {
+export interface AccountRepository
+  extends TransactableRepository,
+    InsertableRepository<Account>,
+    GettableRepository<Account> {
+  changeBalance: (id: string, change: number) => Promise<void>;
   search: (params: {
     IBAN?: string;
     minBalance?: number;
@@ -31,8 +39,27 @@ export interface AccountRepository extends InsertableRepository<Account> {
 }
 
 export const accountRepositoryFactory = (
-  getPool: Lazy<DatabasePool, true>,
+  getConnection: Lazy<DatabaseConnection, true>,
 ): AccountRepository => ({
+  transacting(connection) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return accountRepositoryFactory(() => connection) as unknown as any;
+  },
+  async get(id) {
+    const queryResult = await getConnection().query(
+      sql.type(rowSchema)`SELECT * FROM accounts WHERE id = ${id}`,
+    );
+
+    return queryResult.rows[0] ? rowToAccount(queryResult.rows[0]) : null;
+  },
+  async changeBalance(id, change) {
+    const query = sql.unsafe`
+      UPDATE accounts
+      SET balances = balances || jsonb_build_object('available', jsonb_build_object('value', (balances->'available'->>'value')::numeric + ${change.toString()}::numeric, 'currency', balances->'available'->>'currency'))
+      WHERE id = ${id}
+    `;
+    await getConnection().query(query);
+  },
   async search({
     IBAN,
     minBalance,
@@ -50,11 +77,10 @@ export const accountRepositoryFactory = (
         : null,
     ].filter(notEmpty);
 
-    // I also need the count of the results
-    const { rows } = await getPool().query(sql.type(
+    const { rows } = await getConnection().query(sql.type(
       z.object({
         items: z.array(rowSchema),
-        count: z.number(),
+        count: z.coerce.number(),
       }),
     )`
       WITH filtered AS (
@@ -91,7 +117,7 @@ export const accountRepositoryFactory = (
     };
   },
   async insert(accounts) {
-    await getPool().query(sql.unsafe`
+    await getConnection().query(sql.unsafe`
       INSERT INTO accounts (id, iban, balances, country, created_at, name)
       SELECT *
       FROM ${sql.unnest(
@@ -120,7 +146,7 @@ function rowToAccount(row: z.infer<typeof rowSchema>): Account {
       },
     },
     country: row.country,
-    createdAt: row.createdAt,
+    createdAt: row.created_at,
     name: row.name,
   };
 }
